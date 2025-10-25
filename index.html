@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFind - Doctor Recommendation System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>MediFind</span>
+                </div>
+                <nav id="main-nav">
+                    <ul>
+                        <li><a href="#" class="active" id="nav-search">Find Doctors</a></li>
+                        <li><a href="#" id="nav-all-doctors">All Doctors</a></li>
+                        <li><a href="#" id="nav-register" style="display: none;">Doctor Registration</a></li>
+                        <li><a href="#" id="nav-profile" style="display: none;">My Profile</a></li>
+                        <li><a href="#" id="nav-appointments" style="display: none;">Appointments</a></li>
+                    </ul>
+                </nav>
+                <div class="user-auth">
+                    <div class="auth-buttons" id="auth-buttons">
+                        <button class="btn btn-secondary" id="login-btn">Login</button>
+                        <button class="btn" id="signup-btn">Sign Up</button>
+                    </div>
+                    <div class="user-info" id="user-info" style="display: none;">
+                        <div class="user-avatar" id="user-avatar">U</div>
+                        <span id="user-name">User</span>
+                        <button class="btn btn-small" id="logout-btn">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login/Signup Modal -->
+    <div class="modal" id="auth-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="auth-modal-title">Login to MediFind</h3>
+                <button class="close-modal" id="close-auth-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="login-options">
+                    <div class="login-option active" data-type="customer">Customer</div>
+                    <div class="login-option" data-type="doctor">Doctor</div>
+                </div>
+                
+                <form class="login-form active" id="customer-login-form">
+                    <h4>Customer Login</h4>
+                    <div class="form-group">
+                        <label for="customer-email">Email</label>
+                        <input type="email" id="customer-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-password">Password</label>
+                        <input type="password" id="customer-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn">Login as Customer</button>
+                </form>
+                
+                <form class="login-form" id="doctor-login-form">
+                    <h4>Doctor Login</h4>
+                    <div class="form-group">
+                        <label for="doctor-email">Email</label>
+                        <input type="email" id="doctor-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-password">Password</label>
+                        <input type="password" id="doctor-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn">Login as Doctor</button>
+                </form>
+                
+                <div style="margin-top: 1rem; text-align: center;">
+                    <p>Don't have an account? <a href="#" id="switch-to-signup">Sign up here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal" id="signup-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="signup-modal-title">Create Account</h3>
+                <button class="close-modal" id="close-signup-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="login-options">
+                    <div class="login-option active" data-type="customer">Customer</div>
+                    <div class="login-option" data-type="doctor">Doctor</div>
+                </div>
+                
+                <form class="login-form active" id="customer-signup-form">
+                    <h4>Customer Sign Up</h4>
+                    <div class="form-group">
+                        <label for="customer-signup-name">Full Name</label>
+                        <input type="text" id="customer-signup-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-signup-email">Email</label>
+                        <input type="email" id="customer-signup-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-signup-password">Password</label>
+                        <input type="password" id="customer-signup-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn">Create Customer Account</button>
+                </form>
+                
+                <form class="login-form" id="doctor-signup-form">
+                    <h4>Doctor Sign Up</h4>
+                    <div class="form-group">
+                        <label for="doctor-signup-name">Full Name</label>
+                        <input type="text" id="doctor-signup-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-signup-email">Email</label>
+                        <input type="email" id="doctor-signup-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-signup-password">Password</label>
+                        <input type="password" id="doctor-signup-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn">Create Doctor Account</button>
+                </form>
+                
+                <div style="margin-top: 1rem; text-align: center;">
+                    <p>Already have an account? <a href="#" id="switch-to-login">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div class="modal" id="map-modal">
+        <div class="map-modal-content">
+            <div class="map-modal-header">
+                <h3 class="modal-title">Doctor Location</h3>
+                <button class="close-modal" id="close-map-modal">&times;</button>
+            </div>
+            <div class="map-modal-body">
+                <div id="map"></div>
+                <div class="map-info" id="map-info">
+                    <p>Showing location of <span id="map-doctor-name">Dr. John Doe</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Booking Modal -->
+    <div class="modal" id="booking-modal">
+        <div class="modal-content booking-modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Book Appointment</h3>
+                <button class="close-modal" id="close-booking-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="booking-form">
+                    <div class="form-group">
+                        <label for="booking-doctor">Doctor</label>
+                        <input type="text" id="booking-doctor" class="form-control" readonly>
+                    </div>
+                    <div class="slot-info">
+                        <p><i class="fas fa-info-circle"></i> Each appointment slot is 30 minutes. Please select an available time.</p>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="booking-date">Appointment Date</label>
+                            <input type="date" id="booking-date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="booking-time">Appointment Time</label>
+                            <select id="booking-time" class="form-control" required>
+                                <option value="">Select Time</option>
+                                <!-- Time slots will be dynamically populated -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="slot-error" id="slot-error" style="display: none;">
+                        <i class="fas fa-exclamation-circle"></i> This time slot is not available. Please select another time.
+                    </div>
+                    <div class="available-slots" id="available-slots" style="display: none;">
+                        <h4>Available Time Slots:</h4>
+                        <div id="slot-options">
+                            <!-- Available slots will be dynamically inserted here -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="booking-reason">Reason for Visit</label>
+                        <textarea id="booking-reason" class="form-control" required></textarea>
+                    </div>
+                    <button type="submit" class="btn">Book Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Search Section -->
+        <section class="search-section" id="search-section">
+            <h2 class="section-title">
+                <i class="fas fa-search"></i> Find the Right Doctor
+            </h2>
+            <form class="search-form" id="search-form">
+                <input type="text" class="search-input" id="symptoms-input" placeholder="Enter symptoms or disease (e.g. headache, fever, diabetes)">
+                <button type="submit" class="btn">Search by Symptoms</button>
+            </form>
+            
+            <div class="location-search">
+                <input type="text" class="search-input" id="location-input" placeholder="Enter your location (e.g. New York, NY)">
+                <button type="button" class="btn btn-secondary" id="use-current-location">
+                    <i class="fas fa-location-arrow"></i> Search by Location
+                </button>
+            </div>
+            
+            <!-- Quick Symptoms Buttons -->
+            <div class="quick-symptoms">
+                <h3 class="symptoms-title">Common Symptoms - Click to Search:</h3>
+                <div class="symptoms-buttons">
+                    <button class="symptom-btn" data-symptom="fever">Fever</button>
+                    <button class="symptom-btn" data-symptom="cold">Cold</button>
+                    <button class="symptom-btn" data-symptom="cough">Cough</button>
+                    <button class="symptom-btn" data-symptom="chest pain">Chest Pain</button>
+                    <button class="symptom-btn" data-symptom="headache">Headache</button>
+                    <button class="symptom-btn" data-symptom="sore throat">Sore Throat</button>
+                    <button class="symptom-btn" data-symptom="flu">Flu</button>
+                    <button class="symptom-btn" data-symptom="fatigue">Fatigue</button>
+                </div>
+            </div>
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="location-filter">Distance</label>
+                    <select id="location-filter" class="filter-select">
+                        <option value="all">Any Distance</option>
+                        <option value="5">Within 5 km</option>
+                        <option value="10">Within 10 km</option>
+                        <option value="25">Within 25 km</option>
+                        <option value="50">Within 50 km</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="specialty-filter">Specialty</label>
+                    <select id="specialty-filter" class="filter-select">
+                        <option value="all">All Specialties</option>
+                        <option value="general">General Practice</option>
+                        <option value="cardiology">Cardiology</option>
+                        <option value="dermatology">Dermatology</option>
+                        <option value="pediatrics">Pediatrics</option>
+                        <option value="orthopedics">Orthopedics</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="rating-filter">Minimum Rating</label>
+                    <select id="rating-filter" class="filter-select">
+                        <option value="0">Any Rating</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="4.5">4.5+ Stars</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="results-section">
+            <div class="results-header">
+                <h2 class="section-title">
+                    <i class="fas fa-user-md"></i> Recommended Doctors
+                </h2>
+                <div class="results-count" id="results-count">Showing 0 results</div>
+                <div class="sort-options">
+                    <select id="sort-results">
+                        <option value="rating-desc">Highest Rated</option>
+                        <option value="distance-asc">Nearest First</option>
+                        <option value="name-asc">Name A-Z</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="doctors-grid" id="doctors-grid">
+                <!-- Doctor cards will be dynamically inserted here -->
+            </div>
+        </section>
+
+        <!-- All Doctors Section -->
+        <section class="all-doctors-section" id="all-doctors-section">
+            <div class="results-header">
+                <h2 class="section-title">
+                    <i class="fas fa-users"></i> All Registered Doctors
+                </h2>
+                <div class="results-count" id="all-doctors-count">Showing 0 doctors</div>
+                <div class="sort-options">
+                    <select id="sort-all-doctors">
+                        <option value="rating-desc">Highest Rated</option>
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="specialty-asc">Specialty A-Z</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="doctors-grid" id="all-doctors-grid">
+                <!-- All doctor cards will be dynamically inserted here -->
+            </div>
+        </section>
+
+        <!-- Doctor Registration Section -->
+        <section class="registration-section" id="registration-section">
+            <h2 class="section-title">
+                <i class="fas fa-user-plus"></i> Doctor Registration
+            </h2>
+            <form id="doctor-registration-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="doctor-name">Full Name</label>
+                        <input type="text" id="doctor-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-specialty">Specialty</label>
+                        <select id="doctor-specialty" class="form-control" required>
+                            <option value="">Select Specialty</option>
+                            <option value="general">General Practice</option>
+                            <option value="cardiology">Cardiology</option>
+                            <option value="dermatology">Dermatology</option>
+                            <option value="pediatrics">Pediatrics</option>
+                            <option value="orthopedics">Orthopedics</option>
+                            <option value="neurology">Neurology</option>
+                            <option value="gastroenterology">Gastroenterology</option>
+                            <option value="psychiatry">Psychiatry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-email">Email</label>
+                        <input type="email" id="doctor-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-phone">Phone</label>
+                        <input type="tel" id="doctor-phone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-address">Clinic Address</label>
+                        <input type="text" id="doctor-address" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor-city">City</label>
+                        <input type="text" id="doctor-city" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="doctor-bio">Professional Bio</label>
+                    <textarea id="doctor-bio" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="doctor-education">Education & Qualifications</label>
+                    <textarea id="doctor-education" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="doctor-experience">Years of Experience</label>
+                    <input type="number" id="doctor-experience" class="form-control" min="0" required>
+                </div>
+                <button type="submit" class="btn" id="registration-submit-btn">Register as Doctor</button>
+            </form>
+        </section>
+
+        <!-- Doctor Profile Section -->
+        <section class="profile-section" id="profile-section" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-user-md"></i> My Profile
+            </h2>
+            
+            <div class="profile-success-message" id="profile-success-message" style="display: none;">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Registration successful! Your profile is now live.
+                </div>
+            </div>
+            
+            <div class="profile-header">
+                <div class="profile-image">
+                    <i class="fas fa-user-md fa-5x"></i>
+                </div>
+                <div class="profile-info">
+                    <h3 id="profile-doctor-name">Dr. Name</h3>
+                    <p class="profile-specialty" id="profile-specialty">Specialty</p>
+                    <p class="profile-location" id="profile-location">
+                        <i class="fas fa-map-marker-alt"></i> Address, City
+                    </p>
+                    <div class="profile-rating">
+                        <div class="stars" id="profile-rating">★★★★★</div>
+                        <span class="rating-value" id="profile-rating-value">0.0</span>
+                        <span class="reviews-count" id="profile-reviews-count">(0 reviews)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="profile-details">
+                <div class="detail-group">
+                    <h4><i class="fas fa-envelope"></i> Contact Information</h4>
+                    <p><strong>Email:</strong> <span id="profile-email">email@example.com</span></p>
+                    <p><strong>Phone:</strong> <span id="profile-phone">+1 (555) 123-4567</span></p>
+                </div>
+                
+                <div class="detail-group">
+                    <h4><i class="fas fa-graduation-cap"></i> Education & Qualifications</h4>
+                    <p id="profile-education">Education details</p>
+                </div>
+                
+                <div class="detail-group">
+                    <h4><i class="fas fa-briefcase"></i> Professional Bio</h4>
+                    <p id="profile-bio">Professional bio</p>
+                </div>
+                
+                <div class="detail-group">
+                    <h4><i class="fas fa-chart-line"></i> Experience</h4>
+                    <p><strong>Years of Experience:</strong> <span id="profile-experience">0</span> years</p>
+                </div>
+            </div>
+            
+            <div class="profile-actions">
+                <button class="btn btn-secondary" id="edit-profile-btn">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </button>
+                <button class="btn" id="view-appointments-btn">
+                    <i class="fas fa-calendar-check"></i> View Appointments
+                </button>
+            </div>
+        </section>
+
+        <!-- Appointments Section (Only for Doctors) -->
+        <section class="appointments-section" id="appointments-section">
+            <h2 class="section-title">
+                <i class="fas fa-calendar-check"></i> My Appointments
+            </h2>
+            <div id="appointments-list">
+                <!-- Appointments will be dynamically inserted here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Review Modal -->
+    <div class="modal" id="review-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-doctor-name">Doctor Name</h3>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form class="review-form" id="review-form">
+                    <h4>Add Your Review</h4>
+                    <div class="form-group">
+                        <label for="reviewer-name">Your Name</label>
+                        <input type="text" id="reviewer-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rating</label>
+                        <div class="rating-input">
+                            <span class="star" data-rating="1">★</span>
+                            <span class="star" data-rating="2">★</span>
+                            <span class="star" data-rating="3">★</span>
+                            <span class="star" data-rating="4">★</span>
+                            <span class="star" data-rating="5">★</span>
+                        </div>
+                        <input type="hidden" id="rating-value" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="review-comment">Your Review</label>
+                        <textarea id="review-comment" class="form-control" required></textarea>
+                    </div>
+                    <button type="submit" class="btn">Submit Review</button>
+                </form>
+                
+                <div class="reviews-list" id="reviews-list">
+                    <h4>Patient Reviews</h4>
+                    <!-- Reviews will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About MediFind</h3>
+                    <p>MediFind helps you find the right healthcare professional based on your symptoms, location, and preferences.</p>
+                    <p><small>Location services powered by OpenStreetMap</small></p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#search-section">Find Doctors</a></li>
+                        <li><a href="#all-doctors-section">All Doctors</a></li>
+                        <li><a href="#registration-section">Doctor Registration</a></li>
+                        <li><a href="#appointments-section">Appointments</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Us</h3>
+                    <p>Email: info@medifind.com</p>
+                    <p>Phone: +1 (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 MediFind. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/doctors.js"></script>
+    <script src="js/appointments.js"></script>
+    <script src="js/reviews.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

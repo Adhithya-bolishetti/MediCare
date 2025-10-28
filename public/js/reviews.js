@@ -66,9 +66,39 @@ async function displayReviews(doctorId) {
     }
 }
 
-// Submit review
-reviewForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Initialize star rating interaction
+function initializeStarRating() {
+    document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+            const rating = parseInt(e.target.getAttribute('data-rating'));
+            setStarRating(rating);
+        });
+        
+        star.addEventListener('mouseover', (e) => {
+            const rating = parseInt(e.target.getAttribute('data-rating'));
+            const stars = document.querySelectorAll('.star');
+            stars.forEach(s => {
+                const sRating = parseInt(s.getAttribute('data-rating'));
+                if (sRating <= rating) {
+                    s.classList.add('hover');
+                } else {
+                    s.classList.remove('hover');
+                }
+            });
+        });
+        
+        star.addEventListener('mouseout', () => {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach(s => {
+                s.classList.remove('hover');
+            });
+        });
+    });
+}
+
+// FIXED: Submit review with proper error handling
+async function submitReview(event) {
+    event.preventDefault();
     
     const reviewerName = document.getElementById('reviewer-name').value;
     const rating = parseInt(document.getElementById('rating-value').value);
@@ -76,6 +106,11 @@ reviewForm.addEventListener('submit', async (e) => {
     
     if (rating === 0) {
         alert('Please select a rating.');
+        return;
+    }
+    
+    if (!reviewerName || !comment) {
+        alert('Please fill in all fields.');
         return;
     }
     
@@ -87,7 +122,12 @@ reviewForm.addEventListener('submit', async (e) => {
             comment: comment
         };
         
-        await apiService.addReview(reviewData);
+        const result = await apiService.addReview(reviewData);
+        
+        if (result.error) {
+            alert('Error submitting review: ' + result.error);
+            return;
+        }
         
         // Refresh the reviews display
         await displayReviews(currentDoctorId);
@@ -117,5 +157,17 @@ reviewForm.addEventListener('submit', async (e) => {
     } catch (error) {
         alert('Failed to submit review. Please try again.');
         console.error('Submit review error:', error);
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize star rating
+    initializeStarRating();
+    
+    // FIXED: Add event listener for review form submission
+    const reviewForm = document.getElementById('review-form');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', submitReview);
     }
 });

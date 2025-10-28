@@ -44,9 +44,9 @@ MediFind is a comprehensive web application that helps users find and book appoi
    ```bash
    # Install Live Server extension
    # Right-click index.html and select "Open with Live Server"
-
-  **Option 2: Python**
-  ```bash
+   ```
+   **Option 2: Python**
+    ```bash
     # Python 3
           python -m http.server 8000
     # Python 2

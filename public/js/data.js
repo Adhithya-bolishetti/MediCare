@@ -67,24 +67,3 @@ const sampleDoctors = [
     }
     // Add more sample doctors as needed
 ];
-
-// Initialize data if empty
-function initializeSampleData() {
-    if (!localStorage.getItem('medifind_doctors') || JSON.parse(localStorage.getItem('medifind_doctors')).length === 0) {
-        localStorage.setItem('medifind_doctors', JSON.stringify(sampleDoctors));
-    }
-    
-    // Initialize other data stores
-    if (!localStorage.getItem('medifind_users')) {
-        localStorage.setItem('medifind_users', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('medifind_appointments')) {
-        localStorage.setItem('medifind_appointments', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('medifind_reviews')) {
-        localStorage.setItem('medifind_reviews', JSON.stringify([]));
-    }
-}
-
-// Call this when your app loads
-initializeSampleData();

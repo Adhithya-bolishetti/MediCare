@@ -337,10 +337,11 @@ function displayDoctors(doctorsToShow, gridElement) {
         });
     });
 
-    // Add event listener for book appointment buttons
+    // In the displayDoctors function, make sure this part exists:
     document.querySelectorAll('.book-appointment-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const doctorId = e.target.getAttribute('data-id');
+            console.log('Book appointment clicked for doctor:', doctorId);
             openBookingModal(doctorId);
         });
     });

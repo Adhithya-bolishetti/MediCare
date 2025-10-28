@@ -1,6 +1,14 @@
-// API service functions
-// For production, you might want to use environment variables
+// API service functions with better error handling
 const API_BASE_URL = window.location.origin + '/api';
+
+// Helper function to handle API responses
+async function handleResponse(response) {
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network response was not ok' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+}
 
 const apiService = {
     // Auth endpoints
@@ -10,7 +18,7 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     async login(credentials) {
@@ -19,19 +27,19 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     // Doctor endpoints
     async getDoctors() {
         const response = await fetch(`${API_BASE_URL}/doctors`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     async searchDoctors(params) {
         const queryString = new URLSearchParams(params).toString();
         const response = await fetch(`${API_BASE_URL}/doctors/search?${queryString}`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     async registerDoctor(doctorData) {
@@ -40,7 +48,7 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(doctorData)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     async updateDoctor(id, doctorData) {
@@ -49,18 +57,18 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(doctorData)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     async getDoctorById(id) {
         const response = await fetch(`${API_BASE_URL}/doctors/${id}`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     // Review endpoints
     async getReviews(doctorId) {
         const response = await fetch(`${API_BASE_URL}/reviews/doctor/${doctorId}`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     async addReview(reviewData) {
@@ -69,18 +77,18 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(reviewData)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     // Appointment endpoints
     async getDoctorAppointments(doctorId) {
         const response = await fetch(`${API_BASE_URL}/appointments/doctor/${doctorId}`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     async getUserAppointments(userId) {
         const response = await fetch(`${API_BASE_URL}/appointments/user/${userId}`);
-        return await response.json();
+        return handleResponse(response);
     },
 
     async bookAppointment(appointmentData) {
@@ -89,7 +97,7 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(appointmentData)
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     async updateAppointment(id, status) {
@@ -98,13 +106,13 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })
         });
-        return await response.json();
+        return handleResponse(response);
     },
 
     async deleteAppointment(id) {
         const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
             method: 'DELETE'
         });
-        return await response.json();
+        return handleResponse(response);
     }
 };

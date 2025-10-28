@@ -81,20 +81,17 @@ const Doctor = mongoose.model('Doctor', doctorSchema);
 const Review = mongoose.model('Review', reviewSchema);
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
-// Symptom to specialty mapping for backend
+// Enhanced symptom to specialty mapping for backend
 const symptomMapping = {
     'fever': ['General Practice', 'Pediatrics'],
     'cold': ['General Practice', 'Pediatrics'],
-    'cough': ['General Practice', 'Pediatrics', 'Pulmonology'],
+    'cough': ['General Practice', 'Pediatrics'],
     'chest pain': ['Cardiology', 'General Practice'],
     'heart': ['Cardiology'],
-    'lung': ['Pulmonology', 'General Practice'],
-    'lungs': ['Pulmonology', 'General Practice'],
-    'breathing': ['Pulmonology', 'General Practice'],
     'headache': ['General Practice', 'Neurology'],
-    'sore throat': ['General Practice', 'Pediatrics', 'ENT'],
+    'sore throat': ['General Practice', 'Pediatrics'],
     'flu': ['General Practice', 'Pediatrics'],
-    'fatigue': ['General Practice', 'Endocrinology'],
+    'fatigue': ['General Practice'],
     'skin': ['Dermatology'],
     'rash': ['Dermatology'],
     'acne': ['Dermatology'],
@@ -103,14 +100,11 @@ const symptomMapping = {
     'muscle': ['Orthopedics'],
     'child': ['Pediatrics'],
     'children': ['Pediatrics'],
-    'kid': ['Pediatrics'],
-    'stomach': ['Gastroenterology', 'General Practice'],
-    'digestive': ['Gastroenterology'],
+    'stomach': ['General Practice'],
+    'digestive': ['General Practice'],
     'mental': ['Psychiatry'],
     'depression': ['Psychiatry'],
-    'anxiety': ['Psychiatry'],
-    'brain': ['Neurology'],
-    'nerve': ['Neurology']
+    'anxiety': ['Psychiatry']
 };
 
 // API Routes
@@ -198,64 +192,93 @@ app.post('/api/doctors', async (req, res) => {
     }
 });
 
-// FIXED: Enhanced search to handle symptoms properly
+// FIXED: Completely rewritten search function
 app.get('/api/doctors/search', async (req, res) => {
     try {
         const { symptoms, location, specialty, rating } = req.query;
+        
+        console.log('Search parameters received:', { symptoms, location, specialty, rating });
+        
         let query = {};
         
+        // Build specialty filter
         if (specialty && specialty !== 'all') {
             query.specialty = new RegExp(specialty, 'i');
         }
         
+        // Build rating filter
         if (rating && rating !== '0') {
             query.rating = { $gte: parseFloat(rating) };
         }
         
-        if (location) {
+        // Build location filter
+        if (location && location.trim() !== '') {
             query.$or = [
                 { city: new RegExp(location, 'i') },
                 { address: new RegExp(location, 'i') }
             ];
         }
         
-        // FIXED: Enhanced symptoms search with symptom mapping
-        if (symptoms) {
-            const symptomsLower = symptoms.toLowerCase();
+        // FIXED: Completely rewritten symptoms search logic
+        if (symptoms && symptoms.trim() !== '') {
+            const symptomsLower = symptoms.toLowerCase().trim();
+            console.log('Searching for symptoms:', symptomsLower);
             
-            // First, check if symptoms match any in our mapping
-            let recommendedSpecialties = new Set();
+            // Get all doctor specialties for matching
+            const allDoctors = await Doctor.find({});
+            const allSpecialties = [...new Set(allDoctors.map(d => d.specialty))];
+            console.log('Available specialties:', allSpecialties);
             
-            // Check each symptom in the mapping
+            // Find matching specialties based on symptoms
+            const matchingSpecialties = allSpecialties.filter(spec => {
+                const specLower = spec.toLowerCase();
+                return symptomsLower.includes(specLower) || specLower.includes(symptomsLower);
+            });
+            
+            // Also check symptom mapping
+            let mappedSpecialties = new Set();
             Object.keys(symptomMapping).forEach(symptom => {
                 if (symptomsLower.includes(symptom)) {
                     symptomMapping[symptom].forEach(specialty => {
-                        recommendedSpecialties.add(specialty);
+                        mappedSpecialties.add(specialty);
                     });
                 }
             });
             
-            // If we have specific symptom matches, search by those specialties
-            if (recommendedSpecialties.size > 0) {
+            // Combine both matching methods
+            const allMatchingSpecialties = [
+                ...matchingSpecialties,
+                ...Array.from(mappedSpecialties)
+            ];
+            
+            console.log('Matching specialties found:', allMatchingSpecialties);
+            
+            // If we have matching specialties, search by them
+            if (allMatchingSpecialties.length > 0) {
                 query.$or = query.$or || [];
                 query.$or.push({
-                    specialty: { $in: Array.from(recommendedSpecialties) }
+                    specialty: { $in: allMatchingSpecialties }
                 });
             }
             
-            // Also search in bio and specialty for the symptoms
+            // Always search in bio and specialty for the symptoms text
             query.$or = query.$or || [];
             query.$or.push(
                 { bio: new RegExp(symptoms, 'i') },
-                { specialty: new RegExp(symptoms, 'i') }
+                { specialty: new RegExp(symptoms, 'i') },
+                { education: new RegExp(symptoms, 'i') }
             );
         }
         
+        console.log('Final query:', JSON.stringify(query, null, 2));
+        
         const doctors = await Doctor.find(query);
+        console.log(`Found ${doctors.length} doctors`);
+        
         res.json(doctors);
     } catch (error) {
         console.error('Search error:', error);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error: ' + error.message });
     }
 });
 
@@ -298,7 +321,6 @@ app.get('/api/reviews/doctor/:doctorId', async (req, res) => {
     }
 });
 
-// FIXED: Added better error handling for reviews
 app.post('/api/reviews', async (req, res) => {
     try {
         const { doctorId, reviewer, rating, comment } = req.body;

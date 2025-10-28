@@ -29,22 +29,6 @@ MediFind is a comprehensive web application that helps users find and book appoi
 - **Styling**: Custom CSS with responsive design
 - **Data Storage**: Browser localStorage (for demo purposes)
 
-## 📁 File Structure
-medifind/
-├── index.html
-├── css/
-│ └── style.css
-├── js/
-│ ├── app.js # Main application logic
-│ ├── auth.js # Authentication handling
-│ ├── data.js # Sample data and storage
-│ ├── api.js # API simulations
-│ ├── map.js # Map functionality
-│ ├── doctors.js # Doctor management
-│ ├── appointments.js # Appointment handling
-│ └── reviews.js # Review system
-└── README.md
-
 
 ## 🚀 Installation & Setup
 

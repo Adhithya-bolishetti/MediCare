@@ -107,12 +107,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateUIForUser();
     }
     
-    // Load appointments from localStorage
-    const savedAppointments = localStorage.getItem('appointments');
-    if (savedAppointments) {
-        appointments = JSON.parse(savedAppointments);
-    }
-    
     // Initialize map
     initMap();
     
@@ -306,41 +300,15 @@ function setupEventListeners() {
     });
 
     // Doctor registration
-    doctorRegistrationForm.addEventListener('submit', (e) => {
+    doctorRegistrationForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // Check if this is an update or new registration
-        const existingDoctor = doctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
-        
-        if (existingDoctor) {
-            // Update existing doctor
-            existingDoctor.name = document.getElementById('doctor-name').value;
-            existingDoctor.specialty = document.getElementById('doctor-specialty').value;
-            existingDoctor.email = document.getElementById('doctor-email').value;
-            existingDoctor.phone = document.getElementById('doctor-phone').value;
-            existingDoctor.address = document.getElementById('doctor-address').value;
-            existingDoctor.city = document.getElementById('doctor-city').value;
-            existingDoctor.bio = document.getElementById('doctor-bio').value;
-            existingDoctor.education = document.getElementById('doctor-education').value;
-            existingDoctor.experience = parseInt(document.getElementById('doctor-experience').value);
+        try {
+            // Check if this is an update or new registration
+            const allDoctors = await apiService.getDoctors();
+            const existingDoctor = allDoctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
             
-            // Update user data
-            if (currentUser && currentUser.type === 'doctor') {
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].name = existingDoctor.name;
-                    currentUser.name = existingDoctor.name;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    updateUIForUser();
-                }
-            }
-            
-            alert('Profile updated successfully!');
-            showProfileSection(existingDoctor);
-        } else {
-            // New registration
-            const newDoctor = {
-                id: doctors.length + 1,
+            const doctorData = {
                 name: document.getElementById('doctor-name').value,
                 specialty: document.getElementById('doctor-specialty').value,
                 email: document.getElementById('doctor-email').value,
@@ -352,26 +320,41 @@ function setupEventListeners() {
                 bio: document.getElementById('doctor-bio').value,
                 education: document.getElementById('doctor-education').value,
                 experience: parseInt(document.getElementById('doctor-experience').value),
-                rating: 0,
-                reviewCount: 0
+                userId: currentUser.id
             };
             
-            doctors.push(newDoctor);
-            
-            // Also update the user's data if they're logged in as this doctor
-            if (currentUser && currentUser.type === 'doctor') {
-                // Update the user's name in the users array to match the registered doctor name
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].name = newDoctor.name;
-                    currentUser.name = newDoctor.name;
+            let doctor;
+            if (existingDoctor) {
+                // Update existing doctor
+                doctor = await apiService.updateDoctor(existingDoctor._id, doctorData);
+                
+                // Update user data
+                if (currentUser && currentUser.type === 'doctor') {
+                    currentUser.name = doctor.name;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     updateUIForUser();
                 }
+                
+                alert('Profile updated successfully!');
+                showProfileSection(doctor);
+            } else {
+                // New registration
+                doctor = await apiService.registerDoctor(doctorData);
+                
+                // Also update the user's data if they're logged in as this doctor
+                if (currentUser && currentUser.type === 'doctor') {
+                    // Update the user's name in localStorage to match the registered doctor name
+                    currentUser.name = doctor.name;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    updateUIForUser();
+                }
+                
+                alert('Registration successful! Your profile has been added to our system.');
+                showProfileSection(doctor);
             }
-            
-            alert('Registration successful! Your profile has been added to our system.');
-            showProfileSection(newDoctor);
+        } catch (error) {
+            alert('Registration failed. Please try again.');
+            console.error('Registration error:', error);
         }
     });
 
@@ -404,57 +387,6 @@ function setupEventListeners() {
             const rating = parseInt(e.target.getAttribute('data-rating'));
             setStarRating(rating);
         });
-    });
-
-    // Submit review
-    reviewForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const reviewerName = document.getElementById('reviewer-name').value;
-        const rating = parseInt(document.getElementById('rating-value').value);
-        const comment = document.getElementById('review-comment').value;
-        
-        if (rating === 0) {
-            alert('Please select a rating.');
-            return;
-        }
-        
-        const newReview = {
-            doctorId: currentDoctorId,
-            reviewer: reviewerName,
-            rating: rating,
-            comment: comment,
-            date: new Date().toISOString().split('T')[0]
-        };
-        
-        reviews.push(newReview);
-        
-        // Update doctor's rating and review count
-        updateDoctorRating(currentDoctorId);
-        
-        // Refresh the doctor displays
-        if (resultsSection.style.display !== 'none') {
-            if (currentSearchType === 'symptoms') {
-                const symptoms = symptomsInput.value.trim().toLowerCase();
-                if (symptoms) {
-                    searchBySymptoms(symptoms);
-                }
-            } else if (currentSearchType === 'location') {
-                const location = locationInput.value.trim();
-                if (location) {
-                    findDoctorsByLocation(location);
-                }
-            }
-        }
-        
-        if (allDoctorsSection.style.display !== 'none') {
-            displayAllDoctors();
-        }
-        
-        displayReviews(currentDoctorId);
-        reviewForm.reset();
-        setStarRating(0);
-        alert('Thank you for your review!');
     });
 
     // Sort all doctors when sort option changes
@@ -522,39 +454,44 @@ function showAllDoctorsSection() {
 function showRegistrationSection() {
     if (currentUser && currentUser.type === 'doctor') {
         // Check if doctor already has a profile
-        const existingDoctor = doctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
-        
-        if (existingDoctor) {
-            // Pre-fill the form with existing data
-            document.getElementById('doctor-name').value = existingDoctor.name;
-            document.getElementById('doctor-specialty').value = existingDoctor.specialty;
-            document.getElementById('doctor-email').value = existingDoctor.email;
-            document.getElementById('doctor-phone').value = existingDoctor.phone;
-            document.getElementById('doctor-address').value = existingDoctor.address;
-            document.getElementById('doctor-city').value = existingDoctor.city;
-            document.getElementById('doctor-bio').value = existingDoctor.bio;
-            document.getElementById('doctor-education').value = existingDoctor.education;
-            document.getElementById('doctor-experience').value = existingDoctor.experience;
+        apiService.getDoctors().then(allDoctors => {
+            const existingDoctor = allDoctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
             
-            // Change button text to indicate update
-            registrationSubmitBtn.textContent = 'Update Profile';
-        } else {
-            // Clear form for new registration
-            doctorRegistrationForm.reset();
-            registrationSubmitBtn.textContent = 'Register as Doctor';
-        }
-        
-        searchSection.style.display = 'none';
-        resultsSection.style.display = 'none';
-        allDoctorsSection.style.display = 'none';
-        registrationSection.style.display = 'block';
-        appointmentsSection.style.display = 'none';
-        profileSection.style.display = 'none';
-        navSearch.classList.remove('active');
-        navAllDoctors.classList.remove('active');
-        navRegister.classList.add('active');
-        navProfile.classList.remove('active');
-        navAppointments.classList.remove('active');
+            if (existingDoctor) {
+                // Pre-fill the form with existing data
+                document.getElementById('doctor-name').value = existingDoctor.name;
+                document.getElementById('doctor-specialty').value = existingDoctor.specialty;
+                document.getElementById('doctor-email').value = existingDoctor.email;
+                document.getElementById('doctor-phone').value = existingDoctor.phone;
+                document.getElementById('doctor-address').value = existingDoctor.address;
+                document.getElementById('doctor-city').value = existingDoctor.city;
+                document.getElementById('doctor-bio').value = existingDoctor.bio;
+                document.getElementById('doctor-education').value = existingDoctor.education;
+                document.getElementById('doctor-experience').value = existingDoctor.experience;
+                
+                // Change button text to indicate update
+                registrationSubmitBtn.textContent = 'Update Profile';
+            } else {
+                // Clear form for new registration
+                doctorRegistrationForm.reset();
+                // Pre-fill with user data
+                document.getElementById('doctor-name').value = currentUser.name;
+                document.getElementById('doctor-email').value = currentUser.email;
+                registrationSubmitBtn.textContent = 'Register as Doctor';
+            }
+            
+            searchSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            allDoctorsSection.style.display = 'none';
+            registrationSection.style.display = 'block';
+            appointmentsSection.style.display = 'none';
+            profileSection.style.display = 'none';
+            navSearch.classList.remove('active');
+            navAllDoctors.classList.remove('active');
+            navRegister.classList.add('active');
+            navProfile.classList.remove('active');
+            navAppointments.classList.remove('active');
+        });
     } else {
         alert('Only doctors can access the registration page. Please log in as a doctor.');
         authModal.style.display = 'flex';
@@ -585,11 +522,16 @@ function showAppointmentsSection() {
 }
 
 // Function to show profile section
-function showProfileSection(doctor = null) {
+async function showProfileSection(doctor = null) {
     // If doctor is provided (from registration), use that, otherwise find current doctor
     let currentDoctor = doctor;
     if (!currentDoctor && currentUser && currentUser.type === 'doctor') {
-        currentDoctor = doctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
+        try {
+            const allDoctors = await apiService.getDoctors();
+            currentDoctor = allDoctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
+        } catch (error) {
+            console.error('Error finding doctor:', error);
+        }
     }
     
     if (!currentDoctor) {
@@ -633,54 +575,3 @@ function showProfileSection(doctor = null) {
     navProfile.classList.add('active');
     navAppointments.classList.remove('active');
 }
-
-// Doctor registration
-doctorRegistrationForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    try {
-        // Check if this is an update or new registration
-        const allDoctors = await apiService.getDoctors();
-        const existingDoctor = allDoctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
-        
-        const doctorData = {
-            name: document.getElementById('doctor-name').value,
-            specialty: document.getElementById('doctor-specialty').value,
-            email: document.getElementById('doctor-email').value,
-            phone: document.getElementById('doctor-phone').value,
-            address: document.getElementById('doctor-address').value,
-            city: document.getElementById('doctor-city').value,
-            lat: getRandomInRange(35, 45), // Random latitude for demo
-            lng: getRandomInRange(-120, -75), // Random longitude for demo
-            bio: document.getElementById('doctor-bio').value,
-            education: document.getElementById('doctor-education').value,
-            experience: parseInt(document.getElementById('doctor-experience').value),
-            userId: currentUser.id
-        };
-        
-        let doctor;
-        if (existingDoctor) {
-            // Update existing doctor - you might want to create an update endpoint
-            doctor = existingDoctor;
-            // For now, we'll just show a message that update is not implemented
-            alert('Profile update functionality is not fully implemented in this version.');
-        } else {
-            // New registration
-            doctor = await apiService.registerDoctor(doctorData);
-            
-            // Also update the user's data if they're logged in as this doctor
-            if (currentUser && currentUser.type === 'doctor') {
-                // Update the user's name in localStorage to match the registered doctor name
-                currentUser.name = doctor.name;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                updateUIForUser();
-            }
-            
-            alert('Registration successful! Your profile has been added to our system.');
-            showProfileSection(doctor);
-        }
-    } catch (error) {
-        alert('Registration failed. Please try again.');
-        console.error('Registration error:', error);
-    }
-});

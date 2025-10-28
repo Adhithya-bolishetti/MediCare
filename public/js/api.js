@@ -3,11 +3,24 @@ const API_BASE_URL = window.location.origin + '/api';
 
 // Helper function to handle API responses
 async function handleResponse(response) {
+    const text = await response.text();
+    
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Network response was not ok' }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        let errorMessage = 'Network response was not ok';
+        try {
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+            errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
     }
-    return response.json();
+    
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        throw new Error('Invalid JSON response from server');
+    }
 }
 
 const apiService = {
@@ -38,6 +51,8 @@ const apiService = {
 
     async searchDoctors(params) {
         const queryString = new URLSearchParams(params).toString();
+        console.log('Making search request to:', `${API_BASE_URL}/doctors/search?${queryString}`);
+        
         const response = await fetch(`${API_BASE_URL}/doctors/search?${queryString}`);
         return handleResponse(response);
     },

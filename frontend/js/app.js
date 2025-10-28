@@ -633,3 +633,54 @@ function showProfileSection(doctor = null) {
     navProfile.classList.add('active');
     navAppointments.classList.remove('active');
 }
+
+// Doctor registration
+doctorRegistrationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    try {
+        // Check if this is an update or new registration
+        const allDoctors = await apiService.getDoctors();
+        const existingDoctor = allDoctors.find(d => d.email === currentUser.email || d.name === currentUser.name);
+        
+        const doctorData = {
+            name: document.getElementById('doctor-name').value,
+            specialty: document.getElementById('doctor-specialty').value,
+            email: document.getElementById('doctor-email').value,
+            phone: document.getElementById('doctor-phone').value,
+            address: document.getElementById('doctor-address').value,
+            city: document.getElementById('doctor-city').value,
+            lat: getRandomInRange(35, 45), // Random latitude for demo
+            lng: getRandomInRange(-120, -75), // Random longitude for demo
+            bio: document.getElementById('doctor-bio').value,
+            education: document.getElementById('doctor-education').value,
+            experience: parseInt(document.getElementById('doctor-experience').value),
+            userId: currentUser.id
+        };
+        
+        let doctor;
+        if (existingDoctor) {
+            // Update existing doctor - you might want to create an update endpoint
+            doctor = existingDoctor;
+            // For now, we'll just show a message that update is not implemented
+            alert('Profile update functionality is not fully implemented in this version.');
+        } else {
+            // New registration
+            doctor = await apiService.registerDoctor(doctorData);
+            
+            // Also update the user's data if they're logged in as this doctor
+            if (currentUser && currentUser.type === 'doctor') {
+                // Update the user's name in localStorage to match the registered doctor name
+                currentUser.name = doctor.name;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                updateUIForUser();
+            }
+            
+            alert('Registration successful! Your profile has been added to our system.');
+            showProfileSection(doctor);
+        }
+    } catch (error) {
+        alert('Registration failed. Please try again.');
+        console.error('Registration error:', error);
+    }
+});

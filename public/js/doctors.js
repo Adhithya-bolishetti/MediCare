@@ -6,7 +6,7 @@ async function searchBySymptoms(symptoms) {
     }
     
     try {
-        console.log('Starting symptoms search for:', symptoms);
+        console.log('🔍 Starting symptoms search for:', symptoms);
         
         // Build search parameters
         const params = {
@@ -23,48 +23,86 @@ async function searchBySymptoms(symptoms) {
             }
         });
         
-        console.log('Search params:', params);
+        console.log('📤 Search params:', params);
         
         const filteredDoctors = await apiService.searchDoctors(params);
-        console.log('Search results:', filteredDoctors);
+        console.log('📥 Search results:', filteredDoctors);
 
         if (filteredDoctors.length === 0) {
-            alert('No doctors found matching your symptoms. Try different symptoms or check the console for details.');
-            return;
-        }
-
-        // Store the results for sorting
-        currentSearchResults = [...filteredDoctors];
-        
-        // Calculate distances if user location is available for sorting
-        if (userLocation) {
-            currentSearchResults.forEach(doctor => {
-                doctor.distance = calculateDistance(
-                    userLocation.lat, userLocation.lng,
-                    doctor.lat, doctor.lng
-                );
+            console.log('❌ No doctors found with direct search, trying fallback...');
+            
+            // Fallback: Get all doctors and filter client-side
+            const allDoctors = await apiService.getDoctors();
+            console.log('📊 All doctors available:', allDoctors.length);
+            
+            // Simple client-side filtering
+            const symptomsLower = symptoms.toLowerCase().trim();
+            const fallbackResults = allDoctors.filter(doctor => {
+                const bioMatch = doctor.bio.toLowerCase().includes(symptomsLower);
+                const specialtyMatch = doctor.specialty.toLowerCase().includes(symptomsLower);
+                const educationMatch = doctor.education.toLowerCase().includes(symptomsLower);
+                
+                return bioMatch || specialtyMatch || educationMatch;
             });
+            
+            console.log('🔄 Fallback results:', fallbackResults);
+            
+            if (fallbackResults.length === 0) {
+                alert(`No doctors found for "${symptoms}". Try different symptoms like "fever", "headache", or "cough".`);
+                return;
+            }
+            
+            // Use fallback results
+            currentSearchResults = [...fallbackResults];
+            showSearchResults(currentSearchResults, `Showing ${fallbackResults.length} doctors for "${symptoms}" (fallback search)`);
+            
+        } else {
+            // Use direct search results
+            currentSearchResults = [...filteredDoctors];
+            showSearchResults(currentSearchResults, `Showing ${filteredDoctors.length} doctors for "${symptoms}"`);
         }
-        
-        // Apply initial sorting
-        const sortedResults = sortDoctors([...currentSearchResults], sortResults.value);
-        
-        // Display the doctors
-        displayDoctors(sortedResults, doctorsGrid);
-        searchSection.style.display = 'block';
-        resultsSection.style.display = 'block';
-        allDoctorsSection.style.display = 'none';
-        registrationSection.style.display = 'none';
-        appointmentsSection.style.display = 'none';
-        profileSection.style.display = 'none';
-        
-        // Update results count
-        resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} for "${symptoms}"`;
         
     } catch (error) {
-        console.error('Search error details:', error);
-        alert('Search failed. Please check console for details and try again.');
+        console.error('💥 Search error:', error);
+        
+        // Emergency fallback: Show all doctors
+        try {
+            const allDoctors = await apiService.getDoctors();
+            currentSearchResults = [...allDoctors];
+            showSearchResults(currentSearchResults, `Showing all ${allDoctors.length} doctors (emergency fallback)`);
+            alert('Search encountered an error. Showing all available doctors instead.');
+        } catch (fallbackError) {
+            alert('Search failed completely. Please check console for details.');
+        }
     }
+}
+
+// Helper function to display search results
+function showSearchResults(doctorsToShow, message) {
+    // Calculate distances if user location is available for sorting
+    if (userLocation) {
+        doctorsToShow.forEach(doctor => {
+            doctor.distance = calculateDistance(
+                userLocation.lat, userLocation.lng,
+                doctor.lat, doctor.lng
+            );
+        });
+    }
+    
+    // Apply initial sorting
+    const sortedResults = sortDoctors([...doctorsToShow], sortResults.value);
+    
+    // Display the doctors
+    displayDoctors(sortedResults, doctorsGrid);
+    searchSection.style.display = 'block';
+    resultsSection.style.display = 'block';
+    allDoctorsSection.style.display = 'none';
+    registrationSection.style.display = 'none';
+    appointmentsSection.style.display = 'none';
+    profileSection.style.display = 'none';
+    
+    // Update results count
+    resultsCount.textContent = message;
 }
 
 // New function to find doctors by location
@@ -75,7 +113,7 @@ async function findDoctorsByLocation(locationText) {
     }
     
     try {
-        console.log('Starting location search for:', locationText);
+        console.log('📍 Starting location search for:', locationText);
         
         const params = {
             location: locationText.trim(),
@@ -90,10 +128,10 @@ async function findDoctorsByLocation(locationText) {
             }
         });
         
-        console.log('Location search params:', params);
+        console.log('📤 Location search params:', params);
         
         const filteredDoctors = await apiService.searchDoctors(params);
-        console.log('Location search results:', filteredDoctors);
+        console.log('📥 Location search results:', filteredDoctors);
         
         if (filteredDoctors.length === 0) {
             alert(`No doctors found in ${locationText}. Try a different location.`);
@@ -128,8 +166,8 @@ async function findDoctorsByLocation(locationText) {
         // Update results count
         resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} in ${locationText}`;
     } catch (error) {
-        console.error('Location search error details:', error);
-        alert('Location search failed. Please check console for details and try again.');
+        console.error('💥 Location search error:', error);
+        alert('Location search failed. Please try again.');
     }
 }
 

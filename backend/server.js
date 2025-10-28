@@ -181,6 +181,19 @@ app.get('/api/doctors', async (req, res) => {
     }
 });
 
+// Get single doctor by ID
+app.get('/api/doctors/:id', async (req, res) => {
+    try {
+        const doctor = await Doctor.findById(req.params.id);
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+        res.json(doctor);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 app.post('/api/doctors', async (req, res) => {
     try {
         const doctorData = req.body;
@@ -192,7 +205,6 @@ app.post('/api/doctors', async (req, res) => {
     }
 });
 
-// FIXED: Completely rewritten search function
 // FIXED: Completely rewritten search function - SIMPLIFIED AND WORKING
 app.get('/api/doctors/search', async (req, res) => {
     try {

@@ -7,8 +7,21 @@ async function openBookingModal(doctorId) {
     }
     
     try {
-        const doctor = await apiService.getDoctorById(doctorId);
-        if (!doctor) return;
+        // Try to get doctor by ID, with fallback
+        let doctor;
+        try {
+            doctor = await apiService.getDoctorById(doctorId);
+        } catch (error) {
+            console.log('Failed to get doctor by ID, trying fallback...');
+            // Fallback: get all doctors and find the matching one
+            const allDoctors = await apiService.getDoctors();
+            doctor = allDoctors.find(d => d._id === doctorId);
+        }
+        
+        if (!doctor) {
+            alert('Doctor not found. Please try again.');
+            return;
+        }
         
         currentDoctorId = doctorId;
         bookingDoctor.value = `${doctor.name} - ${doctor.specialty}`;
@@ -22,8 +35,8 @@ async function openBookingModal(doctorId) {
         
         bookingModal.style.display = 'flex';
     } catch (error) {
+        console.error('Error opening booking modal:', error);
         alert('Failed to load doctor information.');
-        console.error('Load doctor error:', error);
     }
 }
 
@@ -93,9 +106,19 @@ async function bookAppointment() {
     const doctorId = currentDoctorId;
     
     try {
-        const doctor = await apiService.getDoctorById(doctorId);
+        let doctor;
+        try {
+            doctor = await apiService.getDoctorById(doctorId);
+        } catch (error) {
+            console.log('Failed to get doctor by ID, trying fallback...');
+            const allDoctors = await apiService.getDoctors();
+            doctor = allDoctors.find(d => d._id === doctorId);
+        }
         
-        if (!doctor) return;
+        if (!doctor) {
+            alert('Doctor not found. Please try again.');
+            return;
+        }
         
         const date = bookingDate.value;
         const time = bookingTime.value;
@@ -234,8 +257,14 @@ async function displayAppointments() {
             });
         });
     } catch (error) {
-        alert('Failed to load appointments. Please try again.');
         console.error('Load appointments error:', error);
+        appointmentsList.innerHTML = `
+            <div class="no-appointments">
+                <i class="fas fa-exclamation-triangle fa-3x"></i>
+                <h3>Error loading appointments</h3>
+                <p>Failed to load appointments. Please try again later.</p>
+            </div>
+        `;
     }
 }
 

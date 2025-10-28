@@ -1,4 +1,4 @@
-// API service functions with better error handling
+// api.js - Updated version with missing functions
 const API_BASE_URL = window.location.origin + '/api';
 
 // Helper function to handle API responses
@@ -17,7 +17,7 @@ async function handleResponse(response) {
     }
     
     try {
-        return JSON.parse(text);
+        return text ? JSON.parse(text) : {};
     } catch (e) {
         throw new Error('Invalid JSON response from server');
     }
@@ -49,6 +49,11 @@ const apiService = {
         return handleResponse(response);
     },
 
+    async getDoctorById(id) {
+        const response = await fetch(`${API_BASE_URL}/doctors/${id}`);
+        return handleResponse(response);
+    },
+
     async searchDoctors(params) {
         const queryString = new URLSearchParams(params).toString();
         console.log('Making search request to:', `${API_BASE_URL}/doctors/search?${queryString}`);
@@ -72,11 +77,6 @@ const apiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(doctorData)
         });
-        return handleResponse(response);
-    },
-
-    async getDoctorById(id) {
-        const response = await fetch(`${API_BASE_URL}/doctors/${id}`);
         return handleResponse(response);
     },
 

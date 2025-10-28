@@ -13,6 +13,13 @@ async function searchBySymptoms(symptoms) {
             rating: document.getElementById('rating-filter').value
         };
         
+        // Remove empty parameters
+        Object.keys(params).forEach(key => {
+            if (!params[key] || params[key] === 'all' || params[key] === '0') {
+                delete params[key];
+            }
+        });
+        
         const filteredDoctors = await apiService.searchDoctors(params);
         
         if (filteredDoctors.length === 0) {
@@ -43,6 +50,7 @@ async function searchBySymptoms(symptoms) {
         allDoctorsSection.style.display = 'none';
         registrationSection.style.display = 'none';
         appointmentsSection.style.display = 'none';
+        profileSection.style.display = 'none';
         
         // Update results count
         resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} for "${symptoms}"`;
@@ -65,6 +73,13 @@ async function findDoctorsByLocation(locationText) {
             specialty: document.getElementById('specialty-filter').value,
             rating: document.getElementById('rating-filter').value
         };
+        
+        // Remove empty parameters
+        Object.keys(params).forEach(key => {
+            if (!params[key] || params[key] === 'all' || params[key] === '0') {
+                delete params[key];
+            }
+        });
         
         const filteredDoctors = await apiService.searchDoctors(params);
         
@@ -96,6 +111,7 @@ async function findDoctorsByLocation(locationText) {
         allDoctorsSection.style.display = 'none';
         registrationSection.style.display = 'none';
         appointmentsSection.style.display = 'none';
+        profileSection.style.display = 'none';
         
         // Update results count
         resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} in ${locationText}`;
@@ -199,7 +215,7 @@ function displayDoctors(doctorsToShow, gridElement) {
         doctorCard.className = 'doctor-card';
         
         // Determine specialty badge class
-        const specialtyClass = `specialty-${doctor.specialty.toLowerCase().replace(' ', '-')}`;
+        const specialtyClass = `specialty-${doctor.specialty.toLowerCase().replace(/ /g, '-')}`;
         
         // Format distance if available
         let distanceText = '';

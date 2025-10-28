@@ -10,7 +10,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from the parent public folder
+app.use(express.static(path.join(__dirname, '../public')));
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medifind';
@@ -170,7 +172,7 @@ app.get('/api/doctors/search', async (req, res) => {
         let query = {};
         
         if (specialty && specialty !== 'all') {
-            query.specialty = specialty;
+            query.specialty = new RegExp(specialty, 'i');
         }
         
         if (rating && rating !== '0') {
@@ -184,6 +186,15 @@ app.get('/api/doctors/search', async (req, res) => {
             ];
         }
         
+        // If symptoms are provided, also search in bio and specialty
+        if (symptoms) {
+            query.$or = query.$or || [];
+            query.$or.push(
+                { bio: new RegExp(symptoms, 'i') },
+                { specialty: new RegExp(symptoms, 'i') }
+            );
+        }
+        
         const doctors = await Doctor.find(query);
         res.json(doctors);
     } catch (error) {
@@ -194,6 +205,22 @@ app.get('/api/doctors/search', async (req, res) => {
 app.get('/api/doctors/:id', async (req, res) => {
     try {
         const doctor = await Doctor.findById(req.params.id);
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+        res.json(doctor);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.put('/api/doctors/:id', async (req, res) => {
+    try {
+        const doctor = await Doctor.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
         if (!doctor) {
             return res.status(404).json({ error: 'Doctor not found' });
         }
@@ -261,6 +288,19 @@ app.get('/api/appointments/user/:userId', async (req, res) => {
 app.post('/api/appointments', async (req, res) => {
     try {
         const appointmentData = req.body;
+        
+        // Check if appointment already exists
+        const existingAppointment = await Appointment.findOne({
+            doctorId: appointmentData.doctorId,
+            date: appointmentData.date,
+            time: appointmentData.time,
+            status: { $ne: 'cancelled' }
+        });
+        
+        if (existingAppointment) {
+            return res.status(400).json({ error: 'Time slot already booked' });
+        }
+        
         const appointment = new Appointment(appointmentData);
         await appointment.save();
         res.json(appointment);
@@ -292,11 +332,12 @@ app.delete('/api/appointments/:id', async (req, res) => {
     }
 });
 
-// Serve frontend
+// Serve frontend - catch all handler
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Access the application at http://localhost:${PORT}`);
 });

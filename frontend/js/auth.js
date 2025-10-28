@@ -1,41 +1,42 @@
 // User management functions
-function loginUser(email, password, type) {
-    const user = users.find(u => u.email === email && u.password === password && u.type === type);
-    
-    if (user) {
-        currentUser = user;
+async function loginUser(email, password, type) {
+    try {
+        const result = await apiService.login({ email, password, type });
+        
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+        
+        currentUser = result;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         updateUIForUser();
         authModal.style.display = 'none';
-        alert(`Welcome back, ${user.name}!`);
-    } else {
-        alert('Invalid email, password, or user type. Please try again.');
+        alert(`Welcome back, ${currentUser.name}!`);
+    } catch (error) {
+        alert('Login failed. Please try again.');
+        console.error('Login error:', error);
     }
 }
 
-function signupUser(name, email, password, type) {
-    // Check if user already exists
-    const existingUser = users.find(u => u.email === email);
-    
-    if (existingUser) {
-        alert('A user with this email already exists. Please use a different email.');
-        return;
+async function signupUser(name, email, password, type) {
+    try {
+        const result = await apiService.signup({ name, email, password, type });
+        
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+        
+        currentUser = result;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForUser();
+        signupModal.style.display = 'none';
+        alert(`Account created successfully! Welcome, ${name}!`);
+    } catch (error) {
+        alert('Signup failed. Please try again.');
+        console.error('Signup error:', error);
     }
-    
-    const newUser = {
-        id: users.length + 1,
-        name: name,
-        email: email,
-        password: password,
-        type: type
-    };
-    
-    users.push(newUser);
-    currentUser = newUser;
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    updateUIForUser();
-    signupModal.style.display = 'none';
-    alert(`Account created successfully! Welcome, ${name}!`);
 }
 
 function logout() {

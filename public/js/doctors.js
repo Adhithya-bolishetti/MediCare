@@ -317,6 +317,7 @@ function displayDoctors(doctorsToShow, gridElement) {
     document.querySelectorAll('.view-reviews').forEach(button => {
         button.addEventListener('click', (e) => {
             const doctorId = e.target.getAttribute('data-id');
+            console.log('View reviews clicked for doctor:', doctorId);
             openReviewModal(doctorId, false);
         });
     });
@@ -324,6 +325,7 @@ function displayDoctors(doctorsToShow, gridElement) {
     document.querySelectorAll('.add-review').forEach(button => {
         button.addEventListener('click', (e) => {
             const doctorId = e.target.getAttribute('data-id');
+            console.log('Add review clicked for doctor:', doctorId);
             openReviewModal(doctorId, true);
         });
     });
@@ -376,19 +378,3 @@ function getStarRating(rating) {
     
     return stars;
 }
-
-// Test function to debug search
-function testSymptomsSearch() {
-    console.log('=== TESTING SYMPTOMS SEARCH ===');
-    
-    // Test common symptoms
-    const testSymptoms = ['fever', 'headache', 'cough', 'cold'];
-    
-    testSymptoms.forEach(symptom => {
-        console.log(`Testing search for: ${symptom}`);
-        searchBySymptoms(symptom);
-    });
-}
-
-// Uncomment the line below to run tests when the page loads
-// document.addEventListener('DOMContentLoaded', testSymptomsSearch);

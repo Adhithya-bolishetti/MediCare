@@ -193,22 +193,30 @@ app.post('/api/doctors', async (req, res) => {
 });
 
 // FIXED: Completely rewritten search function
+// FIXED: Completely rewritten search function - SIMPLIFIED AND WORKING
 app.get('/api/doctors/search', async (req, res) => {
     try {
         const { symptoms, location, specialty, rating } = req.query;
         
-        console.log('Search parameters received:', { symptoms, location, specialty, rating });
+        console.log('🔍 SEARCH PARAMETERS RECEIVED:', { 
+            symptoms, 
+            location, 
+            specialty, 
+            rating 
+        });
         
         let query = {};
         
         // Build specialty filter
         if (specialty && specialty !== 'all') {
             query.specialty = new RegExp(specialty, 'i');
+            console.log('📍 Specialty filter:', query.specialty);
         }
         
         // Build rating filter
         if (rating && rating !== '0') {
             query.rating = { $gte: parseFloat(rating) };
+            console.log('⭐ Rating filter:', query.rating);
         }
         
         // Build location filter
@@ -217,80 +225,65 @@ app.get('/api/doctors/search', async (req, res) => {
                 { city: new RegExp(location, 'i') },
                 { address: new RegExp(location, 'i') }
             ];
+            console.log('🗺️ Location filter:', query.$or);
         }
         
-        // FIXED: Completely rewritten symptoms search logic
+        // FIXED: SIMPLIFIED SYMPTOMS SEARCH - Just search in bio and specialty
         if (symptoms && symptoms.trim() !== '') {
             const symptomsLower = symptoms.toLowerCase().trim();
-            console.log('Searching for symptoms:', symptomsLower);
+            console.log('🤒 Searching for symptoms:', symptomsLower);
             
-            // Get all doctor specialties for matching
-            const allDoctors = await Doctor.find({});
-            const allSpecialties = [...new Set(allDoctors.map(d => d.specialty))];
-            console.log('Available specialties:', allSpecialties);
+            // Create OR conditions for symptoms search
+            const symptomsConditions = {
+                $or: [
+                    { bio: new RegExp(symptoms, 'i') },
+                    { specialty: new RegExp(symptoms, 'i') },
+                    { education: new RegExp(symptoms, 'i') }
+                ]
+            };
             
-            // Find matching specialties based on symptoms
-            const matchingSpecialties = allSpecialties.filter(spec => {
-                const specLower = spec.toLowerCase();
-                return symptomsLower.includes(specLower) || specLower.includes(symptomsLower);
-            });
-            
-            // Also check symptom mapping
-            let mappedSpecialties = new Set();
-            Object.keys(symptomMapping).forEach(symptom => {
-                if (symptomsLower.includes(symptom)) {
-                    symptomMapping[symptom].forEach(specialty => {
-                        mappedSpecialties.add(specialty);
-                    });
-                }
-            });
-            
-            // Combine both matching methods
-            const allMatchingSpecialties = [
-                ...matchingSpecialties,
-                ...Array.from(mappedSpecialties)
-            ];
-            
-            console.log('Matching specialties found:', allMatchingSpecialties);
-            
-            // If we have matching specialties, search by them
-            if (allMatchingSpecialties.length > 0) {
-                query.$or = query.$or || [];
-                query.$or.push({
-                    specialty: { $in: allMatchingSpecialties }
-                });
+            // If we already have location conditions, combine with AND
+            if (query.$or) {
+                query = {
+                    $and: [
+                        { $or: query.$or }, // Existing location conditions
+                        symptomsConditions  // New symptoms conditions
+                    ]
+                };
+            } else {
+                // No existing conditions, just use symptoms
+                query = symptomsConditions;
             }
             
-            // Always search in bio and specialty for the symptoms text
-            query.$or = query.$or || [];
-            query.$or.push(
-                { bio: new RegExp(symptoms, 'i') },
-                { specialty: new RegExp(symptoms, 'i') },
-                { education: new RegExp(symptoms, 'i') }
-            );
+            console.log('🔧 Final symptoms query:', JSON.stringify(query, null, 2));
         }
         
-        console.log('Final query:', JSON.stringify(query, null, 2));
+        console.log('🎯 FINAL QUERY:', JSON.stringify(query, null, 2));
         
         const doctors = await Doctor.find(query);
-        console.log(`Found ${doctors.length} doctors`);
+        console.log(`✅ Found ${doctors.length} doctors`);
+        
+        // Log doctor names for debugging
+        if (doctors.length > 0) {
+            console.log('👨‍⚕️ Doctors found:');
+            doctors.forEach(doctor => {
+                console.log(`   - ${doctor.name} (${doctor.specialty})`);
+            });
+        } else {
+            console.log('❌ No doctors found with current query');
+            
+            // For debugging, let's see what doctors are available
+            const allDoctors = await Doctor.find({});
+            console.log(`📊 Total doctors in database: ${allDoctors.length}`);
+            allDoctors.forEach(doc => {
+                console.log(`   - ${doc.name} (${doc.specialty}) - Bio: ${doc.bio.substring(0, 50)}...`);
+            });
+        }
         
         res.json(doctors);
     } catch (error) {
-        console.error('Search error:', error);
+        console.error('💥 Search error:', error);
         res.status(500).json({ error: 'Server error: ' + error.message });
-    }
-});
-
-app.get('/api/doctors/:id', async (req, res) => {
-    try {
-        const doctor = await Doctor.findById(req.params.id);
-        if (!doctor) {
-            return res.status(404).json({ error: 'Doctor not found' });
-        }
-        res.json(doctor);
-    } catch (error) {
-        res.status(500).json({ error: 'Server error' });
     }
 });
 

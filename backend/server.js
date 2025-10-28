@@ -81,6 +81,38 @@ const Doctor = mongoose.model('Doctor', doctorSchema);
 const Review = mongoose.model('Review', reviewSchema);
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 
+// Symptom to specialty mapping for backend
+const symptomMapping = {
+    'fever': ['General Practice', 'Pediatrics'],
+    'cold': ['General Practice', 'Pediatrics'],
+    'cough': ['General Practice', 'Pediatrics', 'Pulmonology'],
+    'chest pain': ['Cardiology', 'General Practice'],
+    'heart': ['Cardiology'],
+    'lung': ['Pulmonology', 'General Practice'],
+    'lungs': ['Pulmonology', 'General Practice'],
+    'breathing': ['Pulmonology', 'General Practice'],
+    'headache': ['General Practice', 'Neurology'],
+    'sore throat': ['General Practice', 'Pediatrics', 'ENT'],
+    'flu': ['General Practice', 'Pediatrics'],
+    'fatigue': ['General Practice', 'Endocrinology'],
+    'skin': ['Dermatology'],
+    'rash': ['Dermatology'],
+    'acne': ['Dermatology'],
+    'bone': ['Orthopedics'],
+    'joint': ['Orthopedics'],
+    'muscle': ['Orthopedics'],
+    'child': ['Pediatrics'],
+    'children': ['Pediatrics'],
+    'kid': ['Pediatrics'],
+    'stomach': ['Gastroenterology', 'General Practice'],
+    'digestive': ['Gastroenterology'],
+    'mental': ['Psychiatry'],
+    'depression': ['Psychiatry'],
+    'anxiety': ['Psychiatry'],
+    'brain': ['Neurology'],
+    'nerve': ['Neurology']
+};
+
 // API Routes
 
 // User Authentication
@@ -166,6 +198,7 @@ app.post('/api/doctors', async (req, res) => {
     }
 });
 
+// FIXED: Enhanced search to handle symptoms properly
 app.get('/api/doctors/search', async (req, res) => {
     try {
         const { symptoms, location, specialty, rating } = req.query;
@@ -186,8 +219,31 @@ app.get('/api/doctors/search', async (req, res) => {
             ];
         }
         
-        // If symptoms are provided, also search in bio and specialty
+        // FIXED: Enhanced symptoms search with symptom mapping
         if (symptoms) {
+            const symptomsLower = symptoms.toLowerCase();
+            
+            // First, check if symptoms match any in our mapping
+            let recommendedSpecialties = new Set();
+            
+            // Check each symptom in the mapping
+            Object.keys(symptomMapping).forEach(symptom => {
+                if (symptomsLower.includes(symptom)) {
+                    symptomMapping[symptom].forEach(specialty => {
+                        recommendedSpecialties.add(specialty);
+                    });
+                }
+            });
+            
+            // If we have specific symptom matches, search by those specialties
+            if (recommendedSpecialties.size > 0) {
+                query.$or = query.$or || [];
+                query.$or.push({
+                    specialty: { $in: Array.from(recommendedSpecialties) }
+                });
+            }
+            
+            // Also search in bio and specialty for the symptoms
             query.$or = query.$or || [];
             query.$or.push(
                 { bio: new RegExp(symptoms, 'i') },
@@ -198,6 +254,7 @@ app.get('/api/doctors/search', async (req, res) => {
         const doctors = await Doctor.find(query);
         res.json(doctors);
     } catch (error) {
+        console.error('Search error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -241,23 +298,48 @@ app.get('/api/reviews/doctor/:doctorId', async (req, res) => {
     }
 });
 
+// FIXED: Added better error handling for reviews
 app.post('/api/reviews', async (req, res) => {
     try {
-        const reviewData = req.body;
-        const review = new Review(reviewData);
+        const { doctorId, reviewer, rating, comment } = req.body;
+        
+        // Validate required fields
+        if (!doctorId || !reviewer || !rating || !comment) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+        
+        // Validate rating
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+        }
+        
+        // Check if doctor exists
+        const doctor = await Doctor.findById(doctorId);
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+        
+        const review = new Review({
+            doctorId,
+            reviewer,
+            rating,
+            comment
+        });
+        
         await review.save();
         
         // Update doctor's rating
-        const doctorReviews = await Review.find({ doctorId: reviewData.doctorId });
+        const doctorReviews = await Review.find({ doctorId });
         const averageRating = doctorReviews.reduce((sum, rev) => sum + rev.rating, 0) / doctorReviews.length;
         
-        await Doctor.findByIdAndUpdate(reviewData.doctorId, {
+        await Doctor.findByIdAndUpdate(doctorId, {
             rating: Math.round(averageRating * 10) / 10,
             reviewCount: doctorReviews.length
         });
         
         res.json(review);
     } catch (error) {
+        console.error('Review submission error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });

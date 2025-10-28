@@ -1,5 +1,6 @@
 // API service functions
-const API_BASE_URL = 'http://localhost:3000/api';
+// For production, you might want to use environment variables
+const API_BASE_URL = window.location.origin + '/api';
 
 const apiService = {
     // Auth endpoints
@@ -36,6 +37,15 @@ const apiService = {
     async registerDoctor(doctorData) {
         const response = await fetch(`${API_BASE_URL}/doctors`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(doctorData)
+        });
+        return await response.json();
+    },
+
+    async updateDoctor(id, doctorData) {
+        const response = await fetch(`${API_BASE_URL}/doctors/${id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(doctorData)
         });

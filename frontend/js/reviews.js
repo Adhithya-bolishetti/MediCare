@@ -23,6 +23,49 @@ async function openReviewModal(doctorId, showForm) {
     }
 }
 
+function setStarRating(rating) {
+    const stars = document.querySelectorAll('.star');
+    stars.forEach(star => {
+        const starRating = parseInt(star.getAttribute('data-rating'));
+        if (starRating <= rating) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+    document.getElementById('rating-value').value = rating;
+}
+
+// Display reviews for a doctor
+async function displayReviews(doctorId) {
+    try {
+        const doctorReviews = await apiService.getReviews(doctorId);
+        
+        reviewsList.innerHTML = '<h4>Patient Reviews</h4>';
+        
+        if (doctorReviews.length === 0) {
+            reviewsList.innerHTML += '<p>No reviews yet. Be the first to review this doctor!</p>';
+            return;
+        }
+        
+        doctorReviews.forEach(review => {
+            const reviewItem = document.createElement('div');
+            reviewItem.className = 'review-item';
+            reviewItem.innerHTML = `
+                <div class="review-header">
+                    <span class="review-author">${review.reviewer}</span>
+                    <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
+                </div>
+                <div class="review-rating">${getStarRating(review.rating)}</div>
+                <p>${review.comment}</p>
+            `;
+            reviewsList.appendChild(reviewItem);
+        });
+    } catch (error) {
+        console.error('Display reviews error:', error);
+    }
+}
+
 // Submit review
 reviewForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -76,33 +119,3 @@ reviewForm.addEventListener('submit', async (e) => {
         console.error('Submit review error:', error);
     }
 });
-
-// Display reviews for a doctor
-async function displayReviews(doctorId) {
-    try {
-        const doctorReviews = await apiService.getReviews(doctorId);
-        
-        reviewsList.innerHTML = '<h4>Patient Reviews</h4>';
-        
-        if (doctorReviews.length === 0) {
-            reviewsList.innerHTML += '<p>No reviews yet. Be the first to review this doctor!</p>';
-            return;
-        }
-        
-        doctorReviews.forEach(review => {
-            const reviewItem = document.createElement('div');
-            reviewItem.className = 'review-item';
-            reviewItem.innerHTML = `
-                <div class="review-header">
-                    <span class="review-author">${review.reviewer}</span>
-                    <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
-                </div>
-                <div class="review-rating">${getStarRating(review.rating)}</div>
-                <p>${review.comment}</p>
-            `;
-            reviewsList.appendChild(reviewItem);
-        });
-    } catch (error) {
-        console.error('Display reviews error:', error);
-    }
-}

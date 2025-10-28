@@ -1,13 +1,16 @@
 // Function to search by symptoms only
 async function searchBySymptoms(symptoms) {
-    if (!symptoms) {
+    if (!symptoms || symptoms.trim() === '') {
         alert('Please enter symptoms to search for doctors.');
         return;
     }
     
     try {
+        console.log('Starting symptoms search for:', symptoms);
+        
+        // Build search parameters
         const params = {
-            symptoms: symptoms,
+            symptoms: symptoms.trim(),
             location: locationInput.value.trim(),
             specialty: document.getElementById('specialty-filter').value,
             rating: document.getElementById('rating-filter').value
@@ -20,10 +23,13 @@ async function searchBySymptoms(symptoms) {
             }
         });
         
-        const filteredDoctors = await apiService.searchDoctors(params);
+        console.log('Search params:', params);
         
+        const filteredDoctors = await apiService.searchDoctors(params);
+        console.log('Search results:', filteredDoctors);
+
         if (filteredDoctors.length === 0) {
-            alert('No doctors found matching your symptoms. Try different symptoms.');
+            alert('No doctors found matching your symptoms. Try different symptoms or check the console for details.');
             return;
         }
 
@@ -54,22 +60,25 @@ async function searchBySymptoms(symptoms) {
         
         // Update results count
         resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} for "${symptoms}"`;
+        
     } catch (error) {
-        alert('Search failed. Please try again.');
-        console.error('Search error:', error);
+        console.error('Search error details:', error);
+        alert('Search failed. Please check console for details and try again.');
     }
 }
 
 // New function to find doctors by location
 async function findDoctorsByLocation(locationText) {
-    if (!locationText) {
+    if (!locationText || locationText.trim() === '') {
         alert('Please enter a location to search for doctors.');
         return;
     }
     
     try {
+        console.log('Starting location search for:', locationText);
+        
         const params = {
-            location: locationText,
+            location: locationText.trim(),
             specialty: document.getElementById('specialty-filter').value,
             rating: document.getElementById('rating-filter').value
         };
@@ -81,7 +90,10 @@ async function findDoctorsByLocation(locationText) {
             }
         });
         
+        console.log('Location search params:', params);
+        
         const filteredDoctors = await apiService.searchDoctors(params);
+        console.log('Location search results:', filteredDoctors);
         
         if (filteredDoctors.length === 0) {
             alert(`No doctors found in ${locationText}. Try a different location.`);
@@ -116,8 +128,8 @@ async function findDoctorsByLocation(locationText) {
         // Update results count
         resultsCount.textContent = `Showing ${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? 's' : ''} in ${locationText}`;
     } catch (error) {
-        alert('Location search failed. Please try again.');
-        console.error('Location search error:', error);
+        console.error('Location search error details:', error);
+        alert('Location search failed. Please check console for details and try again.');
     }
 }
 
@@ -326,3 +338,19 @@ function getStarRating(rating) {
     
     return stars;
 }
+
+// Test function to debug search
+function testSymptomsSearch() {
+    console.log('=== TESTING SYMPTOMS SEARCH ===');
+    
+    // Test common symptoms
+    const testSymptoms = ['fever', 'headache', 'cough', 'cold'];
+    
+    testSymptoms.forEach(symptom => {
+        console.log(`Testing search for: ${symptom}`);
+        searchBySymptoms(symptom);
+    });
+}
+
+// Uncomment the line below to run tests when the page loads
+// document.addEventListener('DOMContentLoaded', testSymptomsSearch);

@@ -3,9 +3,21 @@ async function openReviewModal(doctorId, showForm) {
     currentDoctorId = doctorId;
     
     try {
-        const doctor = await apiService.getDoctorById(doctorId);
+        // First try to get doctor by ID
+        let doctor;
+        try {
+            doctor = await apiService.getDoctorById(doctorId);
+        } catch (error) {
+            console.log('Failed to get doctor by ID, trying fallback...');
+            // Fallback: get all doctors and find the matching one
+            const allDoctors = await apiService.getDoctors();
+            doctor = allDoctors.find(d => d._id === doctorId);
+        }
         
-        if (!doctor) return;
+        if (!doctor) {
+            alert('Doctor not found. Please try again.');
+            return;
+        }
         
         modalDoctorName.textContent = `Reviews for ${doctor.name}`;
         await displayReviews(doctorId);
@@ -18,8 +30,8 @@ async function openReviewModal(doctorId, showForm) {
         
         reviewModal.style.display = 'flex';
     } catch (error) {
+        console.error('Error opening review modal:', error);
         alert('Failed to load reviews. Please try again.');
-        console.error('Load reviews error:', error);
     }
 }
 
@@ -63,6 +75,7 @@ async function displayReviews(doctorId) {
         });
     } catch (error) {
         console.error('Display reviews error:', error);
+        reviewsList.innerHTML = '<p>Error loading reviews. Please try again later.</p>';
     }
 }
 

@@ -1,74 +1,108 @@
 // Review modal functionality
-function openReviewModal(doctorId, showForm) {
+async function openReviewModal(doctorId, showForm) {
     currentDoctorId = doctorId;
-    const doctor = doctors.find(d => d.id === doctorId);
     
-    if (!doctor) return;
-    
-    modalDoctorName.textContent = `Reviews for ${doctor.name}`;
-    displayReviews(doctorId);
-    
-    if (showForm) {
-        reviewForm.style.display = 'block';
-    } else {
-        reviewForm.style.display = 'none';
-    }
-    
-    reviewModal.style.display = 'flex';
-}
-
-function setStarRating(rating) {
-    const stars = document.querySelectorAll('.star');
-    stars.forEach(star => {
-        const starRating = parseInt(star.getAttribute('data-rating'));
-        if (starRating <= rating) {
-            star.classList.add('active');
+    try {
+        const doctor = await apiService.getDoctorById(doctorId);
+        
+        if (!doctor) return;
+        
+        modalDoctorName.textContent = `Reviews for ${doctor.name}`;
+        await displayReviews(doctorId);
+        
+        if (showForm) {
+            reviewForm.style.display = 'block';
         } else {
-            star.classList.remove('active');
+            reviewForm.style.display = 'none';
         }
-    });
-    document.getElementById('rating-value').value = rating;
-}
-
-// Update doctor rating based on all reviews
-function updateDoctorRating(doctorId) {
-    const doctor = doctors.find(d => d.id === doctorId);
-    if (doctor) {
-        const doctorReviews = reviews.filter(r => r.doctorId === doctorId);
-        doctor.reviewCount = doctorReviews.length;
-        if (doctorReviews.length > 0) {
-            doctor.rating = doctorReviews.reduce((sum, review) => sum + review.rating, 0) / doctorReviews.length;
-            // Round to one decimal place
-            doctor.rating = Math.round(doctor.rating * 10) / 10;
-        } else {
-            doctor.rating = 0;
-        }
+        
+        reviewModal.style.display = 'flex';
+    } catch (error) {
+        alert('Failed to load reviews. Please try again.');
+        console.error('Load reviews error:', error);
     }
 }
 
-// Display reviews for a doctor
-function displayReviews(doctorId) {
-    const doctorReviews = reviews.filter(review => review.doctorId === doctorId)
-                                .sort((a, b) => new Date(b.date) - new Date(a.date));
+// Submit review
+reviewForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    reviewsList.innerHTML = '<h4>Patient Reviews</h4>';
+    const reviewerName = document.getElementById('reviewer-name').value;
+    const rating = parseInt(document.getElementById('rating-value').value);
+    const comment = document.getElementById('review-comment').value;
     
-    if (doctorReviews.length === 0) {
-        reviewsList.innerHTML += '<p>No reviews yet. Be the first to review this doctor!</p>';
+    if (rating === 0) {
+        alert('Please select a rating.');
         return;
     }
     
-    doctorReviews.forEach(review => {
-        const reviewItem = document.createElement('div');
-        reviewItem.className = 'review-item';
-        reviewItem.innerHTML = `
-            <div class="review-header">
-                <span class="review-author">${review.reviewer}</span>
-                <span class="review-date">${review.date}</span>
-            </div>
-            <div class="review-rating">${getStarRating(review.rating)}</div>
-            <p>${review.comment}</p>
-        `;
-        reviewsList.appendChild(reviewItem);
-    });
+    try {
+        const reviewData = {
+            doctorId: currentDoctorId,
+            reviewer: reviewerName,
+            rating: rating,
+            comment: comment
+        };
+        
+        await apiService.addReview(reviewData);
+        
+        // Refresh the reviews display
+        await displayReviews(currentDoctorId);
+        
+        // Refresh the doctor displays
+        if (resultsSection.style.display !== 'none') {
+            if (currentSearchType === 'symptoms') {
+                const symptoms = symptomsInput.value.trim().toLowerCase();
+                if (symptoms) {
+                    searchBySymptoms(symptoms);
+                }
+            } else if (currentSearchType === 'location') {
+                const location = locationInput.value.trim();
+                if (location) {
+                    findDoctorsByLocation(location);
+                }
+            }
+        }
+        
+        if (allDoctorsSection.style.display !== 'none') {
+            displayAllDoctors();
+        }
+        
+        reviewForm.reset();
+        setStarRating(0);
+        alert('Thank you for your review!');
+    } catch (error) {
+        alert('Failed to submit review. Please try again.');
+        console.error('Submit review error:', error);
+    }
+});
+
+// Display reviews for a doctor
+async function displayReviews(doctorId) {
+    try {
+        const doctorReviews = await apiService.getReviews(doctorId);
+        
+        reviewsList.innerHTML = '<h4>Patient Reviews</h4>';
+        
+        if (doctorReviews.length === 0) {
+            reviewsList.innerHTML += '<p>No reviews yet. Be the first to review this doctor!</p>';
+            return;
+        }
+        
+        doctorReviews.forEach(review => {
+            const reviewItem = document.createElement('div');
+            reviewItem.className = 'review-item';
+            reviewItem.innerHTML = `
+                <div class="review-header">
+                    <span class="review-author">${review.reviewer}</span>
+                    <span class="review-date">${new Date(review.date).toLocaleDateString()}</span>
+                </div>
+                <div class="review-rating">${getStarRating(review.rating)}</div>
+                <p>${review.comment}</p>
+            `;
+            reviewsList.appendChild(reviewItem);
+        });
+    } catch (error) {
+        console.error('Display reviews error:', error);
+    }
 }

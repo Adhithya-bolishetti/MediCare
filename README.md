@@ -48,6 +48,6 @@ MediFind is a comprehensive web application that helps users find and book appoi
   **Option 2: Python**
   '''bash
   # Python 3
-  python -m http.server 8000
+        python -m http.server 8000
   # Python 2
-  python -m SimpleHTTPServer 8000
+        python -m SimpleHTTPServer 8000

@@ -1,3 +1,93 @@
+// Function to open booking modal
+async function openBookingModal(doctorId) {
+    if (!currentUser) {
+        alert('Please log in to book an appointment.');
+        authModal.style.display = 'flex';
+        return;
+    }
+    
+    try {
+        const doctor = await apiService.getDoctorById(doctorId);
+        if (!doctor) return;
+        
+        currentDoctorId = doctorId;
+        bookingDoctor.value = `${doctor.name} - ${doctor.specialty}`;
+        
+        // Reset form
+        bookingDate.value = '';
+        bookingTime.innerHTML = '<option value="">Select Time</option>';
+        bookingReason.value = '';
+        slotError.style.display = 'none';
+        availableSlots.style.display = 'none';
+        
+        bookingModal.style.display = 'flex';
+    } catch (error) {
+        alert('Failed to load doctor information.');
+        console.error('Load doctor error:', error);
+    }
+}
+
+// Function to update available time slots based on selected date
+async function updateAvailableSlots(doctorId, date) {
+    if (!date) return;
+    
+    try {
+        // Get existing appointments for this doctor and date
+        const existingAppointments = await apiService.getDoctorAppointments(doctorId);
+        const bookedSlots = existingAppointments
+            .filter(apt => apt.date === date && apt.status !== 'cancelled')
+            .map(apt => apt.time);
+        
+        // Generate time slots from 9 AM to 5 PM in 30-minute intervals
+        const timeSlots = [];
+        for (let hour = 9; hour <= 17; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                timeSlots.push(timeString);
+            }
+        }
+        
+        const availableTimeSlots = timeSlots.filter(slot => !bookedSlots.includes(slot));
+        
+        // Update the time dropdown
+        bookingTime.innerHTML = '<option value="">Select Time</option>';
+        availableTimeSlots.forEach(slot => {
+            const option = document.createElement('option');
+            option.value = slot;
+            option.textContent = slot;
+            bookingTime.appendChild(option);
+        });
+        
+        // Show available slots as buttons
+        slotOptions.innerHTML = '';
+        if (availableTimeSlots.length > 0) {
+            availableTimeSlots.forEach(slot => {
+                const slotButton = document.createElement('div');
+                slotButton.className = 'slot-option';
+                slotButton.textContent = slot;
+                slotButton.addEventListener('click', () => {
+                    // Remove selected class from all options
+                    document.querySelectorAll('.slot-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    // Add selected class to clicked option
+                    slotButton.classList.add('selected');
+                    // Set the time in the dropdown
+                    bookingTime.value = slot;
+                    // Hide slot error if shown
+                    slotError.style.display = 'none';
+                });
+                slotOptions.appendChild(slotButton);
+            });
+            availableSlots.style.display = 'block';
+        } else {
+            availableSlots.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error updating available slots:', error);
+    }
+}
+
 // Function to book appointment
 async function bookAppointment() {
     const doctorId = currentDoctorId;
@@ -29,7 +119,12 @@ async function bookAppointment() {
             duration: 30
         };
         
-        await apiService.bookAppointment(appointmentData);
+        const result = await apiService.bookAppointment(appointmentData);
+        
+        if (result.error) {
+            slotError.style.display = 'block';
+            return;
+        }
         
         alert('Appointment booked successfully!');
         bookingModal.style.display = 'none';
